@@ -1,15 +1,21 @@
-# Write a python Program for Bidirectional Associative Memory with two pairs of vectors.
 import numpy as np
-X = np.array([[1, 1, 1, -1], [-1, -1, 1, 1]])
-Y = np.array([[1, -1], [-1, 1]])
-W = np.dot(Y.T, X)
 
 def bam(x):
     return np.sign(np.dot(W, x))
 
-x_test = np.array([1, -1, -1, -1])
-y_test = bam(x_test)
+def backpropagation(y_target, x):
+    return np.dot(W.T, y_target - bam(x))
 
+X = np.array([[1, 1, 1, -1], [-1, -1, 1, 1]])
+Y = np.array([[1, -1], [-1, 1]])
+W = np.dot(Y.T, X)
+
+x_test = np.array([1, -1, -1, -1])
+y_target = bam(x_test)
+
+delta_W = np.outer(y_target - bam(x_test), x_test)
+W += delta_W
 
 print("Input x:", x_test)
-print("Output y:", y_test)
+print("Target Output y:", y_target)
+print("Updated Weight Matrix W:\n", W)
