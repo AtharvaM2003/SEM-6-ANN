@@ -1,68 +1,63 @@
 import numpy as np
-def sigmoid (x):
-    return 1/(1 + np.exp(-x))
 
-def sigmoid_derivative(x):
-    return x * (1 - x)
+class XORNetwork:
+    def __init__(self):
+        # Initialize the weights and biases randomly
+        self.W1 = np.random.randn(2, 2)
+        self.b1 = np.random.randn(1, 2)
+        self.W2 = np.random.randn(2, 1)
+        self.b2 = np.random.randn(1, 1)
 
-#Input datasets
-inputs = np.array([[0,0],[0,1],[1,0],[1,1]])
-expected_output = np.array([[0],[1],[1],[0]])
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
 
-epochs = 10000
-lr = 0.1
-inputLayerNeurons, hiddenLayerNeurons, outputLayerNeurons = 2,2,1
+    def sigmoid_derivative(self, x):
+        return x * (1 - x)
 
-#Random weights and bias initialization
-hidden_weights = np.random.uniform(size=(inputLayerNeurons,hiddenLayerNeurons))
-hidden_bias =np.random.uniform(size=(1,hiddenLayerNeurons))
-output_weights = np.random.uniform(size=(hiddenLayerNeurons,outputLayerNeurons))
-output_bias = np.random.uniform(size=(1,outputLayerNeurons))
+    def forward(self, X):
+        # Perform the forward pass
+        self.z1 = np.dot(X, self.W1) + self.b1
+        self.a1 = self.sigmoid(self.z1)
+        self.z2 = np.dot(self.a1, self.W2) + self.b2
+        self.a2 = self.sigmoid(self.z2)
+        return self.a2
 
-print("Input:\n",inputs,"\n")
+    def backward(self, X, y, output):
+        # Backpropagation
+        self.output_error = y - output
+        self.output_delta = self.output_error * self.sigmoid_derivative(output)
 
-print("Initial hidden weights: ",end='')
-print(*hidden_weights)
-print("Initial hidden biases: ",end='')
-print(*hidden_bias)
-print("Initial output weights: ",end='')
-print(*output_weights)
-print("Initial output biases: ",end='')
-print(*output_bias)
+        self.z1_error = self.output_delta.dot(self.W2.T)
+        self.z1_delta = self.z1_error * self.sigmoid_derivative(self.a1)
 
+        # Update weights and biases
+        self.W1 += X.T.dot(self.z1_delta)
+        self.b1 += np.sum(self.z1_delta, axis=0, keepdims=True)
+        self.W2 += self.a1.T.dot(self.output_delta)
+        self.b2 += np.sum(self.output_delta, axis=0, keepdims=True)
 
-#Training algorithm
-for _ in range(epochs):
-	#Forward Propagation
-	hidden_layer_activation = np.dot(inputs,hidden_weights)
-	hidden_layer_activation += hidden_bias
-	hidden_layer_output = sigmoid(hidden_layer_activation)
+    def train(self, X, y, epochs):
+        # Train the network for a given number of epochs
+        for epoch in range(epochs):
+            output = self.forward(X)
+            self.backward(X, y, output)
 
-	output_layer_activation = np.dot(hidden_layer_output,output_weights)
-	output_layer_activation += output_bias
-	predicted_output = sigmoid(output_layer_activation)
+    def predict(self, X):
+        # Make predictions for a given set of inputs
+        return self.forward(X)
 
-	#Backpropagation
-	error = expected_output - predicted_output
-	d_predicted_output = error * sigmoid_derivative(predicted_output)
+# Create a new XORNetwork instance
+xor_nn = XORNetwork()
 
-	error_hidden_layer = d_predicted_output.dot(output_weights.T)
-	d_hidden_layer = error_hidden_layer * sigmoid_derivative(hidden_layer_output)
+# Define the input and output datasets for XOR
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([[0], [1], [1], [0]])
 
-	#Updating Weights and Biases
-	output_weights += hidden_layer_output.T.dot(d_predicted_output) * lr
-	output_bias += np.sum(d_predicted_output,axis=0,keepdims=True) * lr
-	hidden_weights += inputs.T.dot(d_hidden_layer) * lr
-	hidden_bias += np.sum(d_hidden_layer,axis=0,keepdims=True) * lr
+# Train the network for 10000 epochs
+xor_nn.train(X, y, epochs=10000)
 
-print("\nFinal hidden weights: ",end='')
-print(*hidden_weights)
-print("Final hidden bias: ",end='')
-print(*hidden_bias)
-print("Final output weights: ",end='')
-print(*output_weights)
-print("Final output bias: ",end='')
-print(*output_bias)
+# Make predictions on the input dataset
+predictions = xor_nn.predict(X)
 
-print("\nOutput from neural network after 10,000 epochs: ",end='')
-print(*predicted_output)
+# Print the predictions
+print(predictions)

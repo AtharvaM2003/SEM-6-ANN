@@ -1,44 +1,51 @@
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing import image
-from object_detection.utils import label_map_util
-from object_detection.utils import visualization_utils as vis_util
+from tensorflow.keras.datasets import cifar10
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-# Load the pre-trained model and label map
-model_path = 'path/to/your/model'
-label_map_path = 'path/to/your/label_map.pbtxt'
+# Load CIFAR-10 dataset
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
 
-detection_graph = tf.saved_model.load(model_path)
-category_index = label_map_util.create_category_index_from_labelmap(label_map_path, use_display_name=True)
+# Define the model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(Conv2D(32, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10, activation='softmax'))
 
-def load_image_into_numpy_array(image_path):
-    image = Image.open(image_path)
-    (im_width, im_height) = image.size
-    return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
+# Define data generators
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
 
-# Object detection function
-def detect_objects(image_path):
-    image_np = load_image_into_numpy_array(image_path)
-    input_tensor = tf.convert_to_tensor(image_np)
-    input_tensor = input_tensor[tf.newaxis, ...]
+test_datagen = ImageDataGenerator(rescale=1./255)
 
-    detections = detection_graph(input_tensor)
+# Prepare the data
+train_set = train_datagen.flow(X_train, tf.keras.utils.to_categorical(y_train, 10), batch_size=32)
+test_set = test_datagen.flow(X_test, tf.keras.utils.to_categorical(y_test, 10), batch_size=32)
 
-    # Visualization of the results
-    vis_util.visualize_boxes_and_labels_on_image_array(
-        image_np[0],
-        detections['detection_boxes'][0].numpy(),
-        detections['detection_classes'][0].numpy().astype(np.int32),
-        detections['detection_scores'][0].numpy(),
-        category_index,
-        use_normalized_coordinates=True,
-        line_thickness=8
-    )
+# Compile the model
+sgd = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
+model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
-    return image_np[0]
+# Train the model
+model.fit(train_set, steps_per_epoch=len(X_train)//32,
+          epochs=100, validation_data=test_set, validation_steps=len(X_test)//32)
 
-# Example usage
-image_path = 'path/to/your/image.jpg'
-output_image = detect_objects(image_path)
-plt.imshow(output_image)
-plt.show()
+# Evaluate the model
+score = model.evaluate(test_set, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])

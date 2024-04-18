@@ -1,43 +1,24 @@
 import numpy as np
 
-class BAM:
-    def __init__(self, input_size, output_size):
-        self.input_size = input_size
-        self.output_size = output_size
-        self.weights = np.zeros((input_size, output_size), dtype=int)
+# Define two pairs of vectors
+x1 = np.array([1, 1, 1, -1])
+y1 = np.array([1, -1])
+x2 = np.array([-1, -1, 1, 1])
+y2 = np.array([-1, 1])
 
-    def train(self, input_vectors, output_vectors):
-        for i in range(len(input_vectors)):
-            input_vector = np.array(input_vectors[i]).reshape((self.input_size, 1))
-            output_vector = np.array(output_vectors[i]).reshape((self.output_size, 1))
-            self.weights += input_vector.dot(output_vector.T)
+# Compute weight matrix W
+W = np.outer(y1, x1) + np.outer(y2, x2)
 
-    def recall(self, input_vector):
-        input_vector = np.array(input_vector).reshape((self.input_size, 1))
-        output_vector = self.weights.T.dot(input_vector)
-        output_vector[output_vector >= 0] = 1
-        output_vector[output_vector < 0] = -1
-        return output_vector.flatten()
+# Define BAM function
+def bam(x):
+    y = np.dot(W, x)
+    y = np.where(y >= 0, 1, -1)
+    return y
 
-# Example usage with two pairs of vectors
-input_vectors = [
-    [1, -1, 1],
-    [-1, 1, -1]
-]
+# Test BAM with input
+x_test = np.array([1, -1, -1, -1])
+y_test = bam(x_test)
 
-output_vectors = [
-    [1, -1],
-    [-1, 1]
-]
-
-bam = BAM(input_size=len(input_vectors[0]), output_size=len(output_vectors[0]))
-
-# Training the BAM
-bam.train(input_vectors, output_vectors)
-
-# Test recall
-test_input = [1, -1, 1]
-recalled_output = bam.recall(test_input)
-
-print(f"Test Input: {test_input}")
-print(f"Recalled Output: {recalled_output}")
+# Print output
+print("Input x: ", x_test)
+print("Output y: ", y_test)
