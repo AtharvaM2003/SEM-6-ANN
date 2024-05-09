@@ -46,7 +46,7 @@ train_generator = train_datagen.flow(X_train, y_train, batch_size=batch_size)
 test_generator = test_datagen.flow(X_test, y_test, batch_size=batch_size)
 
 # Compile the model
-sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+sgd = SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
 model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
 # Train the model

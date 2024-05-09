@@ -1,30 +1,60 @@
-import tensorflow as tf
-from tensorflow.keras.datasets import mnist
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten
-from tensorflow.keras.optimizers import Adam
+import keras
+from keras.datasets import cifar10
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+from keras.optimizers import SGD
+from keras.preprocessing.image import ImageDataGenerator
 
-# Load and preprocess the MNIST dataset
-(X_train, y_train), (X_test, y_test) = mnist.load_data()
-X_train = X_train / 255.0
-X_test = X_test / 255.0
+# Load CIFAR-10 dataset
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
 
-# Define the model architecture
-model = Sequential([
-    Flatten(input_shape=(28, 28)),  # Flatten the 28x28 input images to a 1D array
-    Dense(128, activation='relu'),   # Fully connected layer with 128 units and ReLU activation
-    Dense(10, activation='softmax')  # Output layer with 10 units for 10 classes and softmax activation
-])
+# Convert class vectors to binary class matrices
+num_classes = 10
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+
+# Define the model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(Conv2D(32, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(num_classes, activation='softmax'))
+
+# Define data generators
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+# Prepare the data
+batch_size = 32
+train_generator = train_datagen.flow(X_train, y_train, batch_size=batch_size)
+test_generator = test_datagen.flow(X_test, y_test, batch_size=batch_size)
 
 # Compile the model
-model.compile(optimizer=Adam(learning_rate=0.001),
-              loss='sparse_categorical_crossentropy',  # Use sparse categorical cross-entropy for integer labels
-              metrics=['accuracy'])
+sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
 # Train the model
-model.fit(X_train, y_train, batch_size=64, epochs=10, verbose=1)
+epochs = 100
+model.fit_generator(train_generator, steps_per_epoch=len(X_train)//batch_size, epochs=epochs,
+                    validation_data=test_generator, validation_steps=len(X_test)//batch_size)
 
-# Evaluate the model on test data
-loss, accuracy = model.evaluate(X_test, y_test)
-print(f"Test Loss: {loss}")
-print(f"Test Accuracy: {accuracy}")
+# Evaluate the model
+score = model.evaluate_generator(test_generator, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])
